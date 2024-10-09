@@ -1,5 +1,6 @@
 package bandeau;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.LinkedList;
 
 /**
@@ -20,6 +21,9 @@ class ScenarioElement {
  * Un scenario sait se jouer sur un bandeau.
  */
 public class Scenario {
+    private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
+
+
 
     private final List<ScenarioElement> myElements = new LinkedList<>();
 
@@ -30,7 +34,9 @@ public class Scenario {
      * @param repeats le nombre de répétitions pour cet effet
      */
     public void addEffect(Effect e, int repeats) {
+        lock.writeLock().lock();
         myElements.add(new ScenarioElement(e, repeats));
+        lock.writeLock().unlock();
     }
 
     /**
@@ -38,14 +44,18 @@ public class Scenario {
      *
      * @param b le bandeau ou s'afficher.
      */
-    public void playOn(Bandeau b) {
+    public void playOn(BandeauVerrouillable b) {
         Thread t = new Thread(){
             public void run(){
+                lock.readLock().lock();
+                b.lock();
                 for (ScenarioElement element : myElements) {
                     for (int repeats = 0; repeats < element.repeats; repeats++) {
                         element.effect.playOn(b);
                     }
                 }  
+                b.unlock();
+                lock.readLock().unlock();
             }
         };
         t.start();
